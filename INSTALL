@@ -1,0 +1,36 @@
+#!/bin/bash
+
+git_dir="$(dirname "$0")"
+
+# install symlinks to git repo files in $HOME and copy config
+
+if [ "$1" = "uninstall" ] ; then
+	test -h ~/.clueprompt 			&& rm ~/.clueprompt
+	test -h ~/.cluectl 			&& rm ~/.cluectl
+	test -h ~/.clueprompt.cfg 		&& echo "to remove your config plz do 'rm ~/.clueprompt.cfg'"
+	test -h ~/.clueprompt.defs 		&& rm ~/.clueprompt.defs
+	test -h ~/.clueprompt.style.default 	&& rm ~/.clueprompt.style.default
+
+else
+	test -h ~/.clueprompt 			|| ln -s "$git_dir/clueprompt" ~/.clueprompt
+	test -h ~/cluectl 			|| ln -s "$git_dir/clueprompt" ~/cluectl
+	test -f ~/.clueprompt.cfg 		|| cp "$git_dir/clueprompt.cfg" ~/.clueprompt.cfg
+	test -h ~/.clueprompt.defs 		|| ln -s "$git_dir/clueprompt.defs" ~/.clueprompt.defs
+	test -h ~/.clueprompt.style.default 	|| ln -s "$git_dir/clueprompt.style.default" ~/.clueprompt.style.default
+
+cat << EOF
+Add this to your .bashrc 
+
+if [ -f ~/.clueprompt -a -f ~/.clueprompt.cfg -a -f ~/.clueprompt.defs ]; then
+    . ~/.clueprompt.defs
+    . ~/.clueprompt.cfg
+    . $_clue_design_file
+    . ~/.clueprompt
+    alias cluectl='. ~/cluectl'
+fi
+
+
+don't forget to edit your config ~/.clueprompt.cfg
+
+fi
+

@@ -1,0 +1,211 @@
+
+## this "script" only makes sence when beeing sourced :)
+
+cluectl_help(){
+    cat << EOF 
+FEATURESTORE          enable / disable
+hexadecimal uptime days: -H	-h
+colored timestamps:     -T      -t
+virtual-username:       -V      -v
+show debian version:    -D      -d
+workstation color:      -W      -w
+display short domain:   -S      -s
+show jobs in prompt:    -J      -j
+git feature on/off:     -G      -g
+ - git autofetch info:  -aI     -ai
+ - git autocommit       -aC     -ac
+ - git a.fetch trigger: -aT     -at
+ - git commit info:     -gC     -gc
+ - git workspace info:  -gW     -gw
+ - git branch info:     -bI     -gi
+ - git merge file info: -gM     -gm
+
+virtual-username:
+ set the username to be changed:        -vu <usename>
+ set the name to be displayed instead:  -vn <displayname>
+
+workstation color:
+ set workstation name to be highlighted: -wn <name>
+
+clueprompt:
+ set flavour to default:        -P
+ set flavour to xyz:            -p xyz
+ set colors/design to default:  -C
+ set colors/design to xyz:      -c xyz
+
+git (auto)fetch (permanent setting for each git tree):
+ set interval to automatically do a "git fetch":    set <minutes>
+ remove the autofetch from the repo u'r in:         del
+ simply to a "git fetch" and update timestamps:     do
+ get info about what is configured in this repo:    get
+
+git (autocommit)
+ set autocommit:    autocommit
+ remove autocommit: noautocommit
+
+git branch info's
+ display what action is necessary on other branches: bi
+
+show this help screen: -h
+
+btw most settings via cluectl are stored in your terminal session
+to make them persistent, update your .clueprompt.cfg
+
+EOF
+}
+
+
+case $1 in
+	-H)	_clue_feature_uptime_hexdays=true	;;
+	-h)	_clue_feature_uptime_hexdays=false	;;
+	-T)	_clue_feature_colorful_timestamps=true	;;
+	-t)	_clue_feature_colorful_timestamps=false 	;;
+	-V)	_clue_feature_virtual_username=true 	;;
+	-v)	_clue_feature_virtual_username=false	;;
+	-D)	_clue_feature_debian_distri=true		;;
+	-d)	_clue_feature_debian_distri=false		;;
+	-W)	_clue_feature_workstation_color=true	;;
+	-w)	_clue_feature_workstation_color=false	;;
+	-S)	_clue_feature_short_domain=true		;;
+	-s)	_clue_feature_short_domain=false		;;
+	-J)	_clue_feature_show_jobs=true		;;
+	-j)	_clue_feature_show_jobs=false		;;
+	-E)	_clue_feature_SElinux=true			;;
+	-e)	_clue_feature_SElinux=false		;;
+	-G)	_clue_feature_git=true			;;
+	-g)	_clue_feature_git=false			;;
+	-aI)	_clue_feature_git_autofetch=true		;;
+	-ai)	_clue_feature_git_autofetch=false		;;
+    	-hF)   _clue_feature_hostfeatures=true    ;;
+    	-hf)   _clue_feature_hostfeatures=false   ;;
+	-aT)	_clue_feature_git_autofetch_trigger=true	;;
+	-at)	_clue_feature_git_autofetch_trigger=false	;;
+	-aC)	_clue_feature_git_autocommit=true	;;
+	-ac)	_clue_feature_git_autocommit=false	;;
+	-gC)	_clue_feature_git_commit_status=true	;;
+	-gc)	_clue_feature_git_commit_status=false	;;
+	-gW)	_clue_feature_git_working_tree_info=true	;;
+	-gw)	_clue_feature_git_working_tree_info=false	;;
+	-gI)    _clue_feature_git_branches_commit_status=true ;;
+	-gi)    _clue_feature_git_branches_commit_status=false ;;
+	-gM)    _clue_feature_git_show_merge_files=true ;;
+	-gm)    _clue_feature_git_show_merge_files=false ;;
+	-vu)	_clue_user_name=$2				;;
+	-vn)	_clue_virtual_user=$2			;;
+	-wn)	_clue_workstation_name=$2			;;
+    	-P)     _clue_prompt_flavour=default   ;;
+    	-p)     _clue_prompt_flavour=$2        ;;
+	-c)	_clue_design_file="$HOME/.clueprompt.style.$poc"			
+            . $_clue_design_file
+            ;;
+	-C)	 _clue_design_file="$HOME/.clueprompt.style.default"
+            . $_clue_design_file
+            ;;
+     set)   _clue_git_toplevel="$(git rev-parse --show-toplevel)"
+            _clue_git_autofetch_file="$(dirname ${_clue_git_toplevel})/.$(basename ${_clue_git_toplevel}).autofetch"
+            _clue_git_autofetch_try="${_clue_git_autofetch_file}.try"
+            if [ "${_clue_git_toplevel}" = "" ] ; then
+                echo "not in a git repo"
+            elif [  "$2" != ""  ] ; then
+                echo $2 > "$_clue_git_autofetch_try"
+                touch -d 1970-01-01 "$_clue_git_autofetch_try"
+                touch -d 1970-01-01 "$_clue_git_autofetch_file"
+            else
+                echo "ERR no interval given"
+            fi          
+            ;;
+     get)   _clue_git_toplevel="$(git rev-parse --show-toplevel)"
+            _clue_git_autofetch_file="$(dirname ${_clue_git_toplevel})/.$(basename ${_clue_git_toplevel}).autofetch"
+            _clue_git_autofetch_try="${_clue_git_autofetch_file}.try"
+            if test -f "$_clue_git_autofetch_try" ; then
+                                echo "autofetch is set to $(cat $_clue_git_autofetch_try) minutes for $_clue_git_toplevel"
+                        else
+                                echo "no autofetch configured for $_clue_git_toplevel"
+                        fi
+            ;;
+     do)    _clue_git_toplevel="$(git rev-parse --show-toplevel)"
+            _clue_git_autofetch_file="$(dirname ${_clue_git_toplevel})/.$(basename ${_clue_git_toplevel}).autofetch"
+            _clue_git_autofetch_try="${_clue_git_autofetch_file}.try"
+            if [ "$_clue_git_toplevel" != "" -a -f "$_clue_git_autofetch_file" -a -f "$_clue_git_autofetch_try" ] ; then
+                touch -d 1970-01-01 "$_clue_git_autofetch_file"
+                git fetch && touch "$_clue_git_autofetch_file" "$_clue_git_autofetch_try"
+            elif [ "$_clue_git_toplevel" != "" -a -f "$_clue_git_autofetch_file" ] ; then
+                touch -d 1970-01-01 "$_clue_git_autofetch_file"
+                git fetch && touch "$_clue_git_autofetch_file"
+            elif [ "$_clue_git_toplevel" != "" ] ; then
+                echo "no autofetch configured, but doing a \"git fetch\" for you"
+                git fetch
+            else
+                echo "not in a git repo - doing nothing"
+            fi
+            ;;
+     del)   _clue_git_toplevel="$(git rev-parse --show-toplevel)"
+            _clue_git_autofetch_file="$(dirname ${_clue_git_toplevel})/.$(basename ${_clue_git_toplevel}).autofetch"
+            _clue_git_autofetch_try="${_clue_git_autofetch_file}.try"
+            test -f "$_clue_git_autofetch_file" && rm "$_clue_git_autofetch_file"
+            test -f "$_clue_git_autofetch_try" && rm "$_clue_git_autofetch_try"
+            ;;
+
+     # show ahead/behind infos about other branches currently not checked out
+     bi)	(
+            git branch -v | sed "s/^*//" | while read branch commit rest ; do
+                state="$(echo "$rest" | cut -d\[ -f 2 | cut -d\] -f 1 )"
+                if echo "$state" | egrep -q "ahead.*behind" ; then
+                    echo -e "MERGE: ${_clueCol_gitcommit_diverged}$_clue_git_symbol_diverged${Color_Off} $branch"
+                elif echo "$state" | grep -q "ahead" ; then
+                    echo -e "PUSH:  ${_clueCol_gitcommit_ahead}$_clue_git_symbol_ahead${Color_Off} $branch"
+                elif echo "$state" | grep -q "behind" ; then
+                    echo -e "PULL:  ${_clueCol_gitcommit_fastforward}$_clue_git_symbol_fastforward${Color_Off} $branch"
+                else
+                    echo -e "CLEAN: ${_clueCol_gitcommit_same}$_clue_git_symbol_same${Color_Off} $branch"
+                fi
+            done
+            ) | sed 's/\\\]//g;s/\\\[//g'
+            ;;
+    fi)     _clue_git_status_porcelain="$(git status -u --porcelain)"
+            _clue_func_git_diff
+            ;;
+    fd)     _clue_git_status_porcelain="$(git status -u --porcelain)"
+            _clue_cdup="$( git rev-parse --show-cdup )"
+            # staged
+            echo -e "${_clueCol_git_staged:2:10}${_clue_git_symbol_worktree_staged_open}STAGED${_clue_git_symbol_worktree_staged_close}${Color_Off:2:7}:"
+            git diff FETCH_HEAD --name-only | while read _clue_file ; do
+                echo "$_clue_git_status_porcelain" | egrep "^(A|D|M)  $_clue_file$" | cut -c 4-
+            done | while read _clue_mergefile ; do
+                git diff FETCH_HEAD $_clue_cdup$_clue_mergefile
+            done
+            # changed
+            echo -e "${_clueCol_git_changed:2:10}${_clue_git_symbol_worktree_changed_open}CHANGED${_clue_git_symbol_worktree_changed_close}${Color_Off:2:7}:"
+            git diff FETCH_HEAD --name-only | while read _clue_file ; do
+                echo "$_clue_git_status_porcelain" | egrep "^ (A|D|M) $_clue_file$" | cut -c 4-
+            done | while read _clue_mergefile ; do
+                git diff FETCH_HEAD $_clue_cdup$_clue_mergefile
+            done
+            # untracked
+            echo -e "${_clueCol_git_untracked:2:10}${_clue_git_symbol_worktree_untracked_open}UNTRACKED${_clue_git_symbol_worktree_untracked_close}${Color_Off:2:7}:"
+            git diff FETCH_HEAD --name-only | while read _clue_file ; do
+                echo "$_clue_git_status_porcelain" | egrep "^\?\? $_clue_file$" | cut -c 4-
+            done 
+            ;;
+    autocommit)     _clue_git_toplevel="$(git rev-parse --show-toplevel)"
+                    _clue_git_autocommit_file="$(dirname ${_clue_git_toplevel})/.$(basename ${_clue_git_toplevel}).autocommit"
+            if [ "${_clue_git_toplevel}" = "" ] ; then
+                echo "not in a git repo"
+            else 
+                touch -d 1970-01-01 "$_clue_git_autocommit_file"
+            fi          
+            ;;
+    noautocommit)   _clue_git_toplevel="$(git rev-parse --show-toplevel)"
+                    _clue_git_autocommit_file="$(dirname ${_clue_git_toplevel})/.$(basename ${_clue_git_toplevel}).autocommit"
+            if [ "${_clue_git_toplevel}" = "" ] ; then
+                echo "not in a git repo"
+            elif [ -f "$_clue_git_autocommit_file" ] ; then
+                rm "$_clue_git_autocommit_file"
+            fi   
+            ;; 
+    --help)     cluectl_help   ;;
+    *)      cluectl_help    ;;
+esac
+ . ~/.clueprompt
+
+

@@ -1,0 +1,119 @@
+# default colors 
+_clueCol_username="$Blue"
+_clueCol_host="$Purple"
+_clueCol_path="$Black"
+_clueCol_at_default="$Black"
+
+## color variables to be set per feature
+# environment_color
+_clueCol_ENV_live="$BIRed"
+_clueCol_ENV_stage="$BIYellow"
+_clueCol_ENV_dev="$BIGreen"
+_clueCol_ENV_production="$BIPurple"
+_clueCol_ENV_default="$BIBlue"
+
+# SElinux
+_clueCol_SE_unknown="$On_Purple"
+_clueCol_SE_disabled="$On_Yellow"
+_clueCol_SE_enforcing="$On_Blue"
+_clueCol_SE_permissive="$On_IRed"
+_clueCol_SE_user="$Green"
+_clueCol_SE_staff="$Blue"
+_clueCol_SE_sysadm="$Red"
+_clueCol_SE_default="$Black"
+
+# virtual_username
+_clueCol_virtual_username="$UCyan"
+
+# debian_distri
+_clueCol_distri_7=""
+_clueCol_distri_6="$Black$On_Yellow"
+_clueCol_distri_5="$Black$On_Red"
+_clueCol_distri_4="$Black$On_Red"
+_clueCol_distri_default="$Black$On_Purple"
+
+# workstation color
+_clueCol_workstation="$UGreen"
+
+# show nr of running jobs 
+_clueCol_jobs="$Blue"
+
+
+_clue_timestamp_format="$Time24hm"
+
+_clueCol_hexdays="$Blue"
+
+# git autofetch
+_clueCol_autofetch_ok="$Green"
+_clueCol_autofetch_fail="$On_Red"
+_clueCol_autofetch_in_progress="$Blue"
+_clueCol_autofetch_disabled="$Black$On_BBlack"
+_clueCol_autofetch_disabled_warn="$IYellow"
+# git commit status
+_clueCol_gitcommit_fastforward="$IWhite$On_Green"
+_clueCol_gitcommit_behind="$IWhite$On_Red"
+_clueCol_gitcommit_ahead="$Black$On_Yellow"
+_clueCol_gitcommit_same="$Green"
+_clueCol_gitcommit_diverged="$Black$On_IRed"
+_clueCol_gitcommit_unknown="$Black$On_Yellow"
+_clueCol_gitcommit_unknown_autofetch_disabled="$Black"
+_clueCol_gitcommit_unknown_autofetch_disabled_warn="$Cyan"
+_clueCol_gitcommit_localbranch="$BBlue"
+### git working tree
+# clean - nothing to commit, no untracked or changed files 
+_clueCol_git_clean="$Green"
+# changed files (probably untracked files too)
+_clueCol_git_changed="$IRed"
+# staged files (probably changed and untracked files too)
+_clueCol_git_staged="$BRed"
+# untracked files only
+_clueCol_git_untracked="$Yellow"
+# color of the path when in a git tree
+_clueCol_git_path="$BBlack"
+
+_clue_git_symbol_worktree_clean_open="*"
+_clue_git_symbol_worktree_clean_close="*"
+
+_clue_git_symbol_worktree_changed_open="("
+_clue_git_symbol_worktree_changed_close=")"
+
+_clue_git_symbol_worktree_untracked_open="["
+_clue_git_symbol_worktree_untracked_close="]"
+
+_clue_git_symbol_worktree_staged_open="{"
+_clue_git_symbol_worktree_staged_close="}"
+
+_clueCol_git_symbol_repo="$White"
+_clueCol_git_repo="$BPurple"
+
+# up2date
+_clue_autofetch_symbol_up2date="%"
+# in progress
+_clue_autofetch_symbol_in_progress="%"
+# out-of-date
+_clue_autofetch_symbol_out_of_date="%"
+# no timestamp file present
+_clue_autofetch_symbol_unconfigured="°"
+# no timestamp file and no current commit old
+_clue_autofetch_symbol_unconfigured_and_old="°"
+
+# autofetch is unconfigured but last log from someone else is not too old
+_clue_git_symbol_unconfigured_same="="
+
+_clue_git_symbol_diverged="#"
+_clue_git_symbol_fastforward=">" 
+_clue_git_symbol_merge="&"
+_clue_git_symbol_ahead="<"
+_clue_git_symbol_same="="
+_clue_git_symbol_unknown="?"
+_clue_git_symbol_localbranch="^"
+
+_clue_git_symbol_repo="@"
+_clue_git_symbol_path=":"
+
+
+_clueCol_last_cmd_exit="$BIRed"
+_clueCol_last_cmd_brace="$Black"
+_clue_last_cmd_symbol_open="["
+_clue_last_cmd_symbol_close="]"
+

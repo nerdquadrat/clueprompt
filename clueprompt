@@ -1,0 +1,484 @@
+
+# shell code to be sourced
+
+# author:	Sven Wagner
+# 		http://github.com/nerdquadrat/clueprompt
+# license	GPLv2
+
+# config, definitions and design file should already be read by .bashrc
+#. ~/.clueprompt.cfg
+#. ~/.clueprompt.defs
+#. $_clue_design_file
+
+# set some factory defaults
+if [ -z "$_clue_feature_virtual_username" ] ; then 	_clue_feature_virtual_username=true	; fi
+if [ -z "$_clue_feature_debian_distri" ] ; then 	_clue_feature_debian_distri=true		; fi
+if [ -z "$_clue_feature_workstation_color" ] ; then 	_clue_feature_workstation_color=true	; fi
+if [ -z "$_clue_feature_short_domain" ] ; then 		_clue_feature_short_domain=true		; fi
+if [ -z "$_clue_feature_show_jobs" ] ; then 		_clue_feature_show_jobs=true		; fi
+if [ -z "$_clue_feature_colorful_timestamps" ] ; then 	_clue_feature_colorful_timestamps=true	; fi
+if [ -z "$_clue_feature_git" ] ; then 			_clue_feature_git=true			; fi
+if [ -z "$_clue_feature_git_autofetch" ] ; then 	_clue_feature_git_autofetch=true		; fi
+if [ -z "$_clue_feature_git_commit_status" ] ; then 	_clue_feature_git_commit_status=true	; fi
+if [ -z "$_clue_feature_git_working_tree_info" ] ; then _clue_feature_git_working_tree_info=true	; fi
+if [ -z "$_clue_feature_last_cmd_exit_status" ] ; then 	_clue_feature_last_cmd_exit_status=true	; fi
+
+# this feature it would actually "do" something (do a "git fetch", but actually does more than displaying), so disabled by default
+if [ -z "$_clue_feature_git_autofetch_trigger" ] ; then	        _clue_feature_git_autofetch_trigger=false	; fi
+if [ -z "$_clue_feature_git_autocommit" ] ; then	        _clue_feature_git_autocommit=false	; fi
+# this features probably make the prompt less responsible so disabled by default
+if [ -z "$_clue_feature_git_branches_commit_status" ] ; then    _clue_feature_git_branches_commit_status=false	; fi
+if [ -z "$ _clue_feature_git_show_merge_files" ] ; then         _clue_feature_git_show_merge_files=false ; fi
+
+# uncommon, experimental or half implemented features are disabled by default
+if [ -z "$_clue_feature_SElinux" 		] ; then _clue_feature_SElinux=false		; fi
+if [ -z "$_clue_feature_SElinux_context" 	] ; then _clue_feature_SElinux_context=false	; fi
+if [ -z "$_clue_feature_SElinux_getenforce" ] ; then    _clue_feature_SElinux_getenforce=false	; fi
+if [ -z "$_clue_feature_hostfeatures" 	] ; then     	_clue_feature_hostfeatures=false		; fi
+if [ -z "$_clue_feature_environment_color" ] ; then 	_clue_feature_environment_color=false	; fi
+if [ -z "$_clue_feature_uptime_hexdays" ] ; then 	_clue_feature_uptime_hexdays=false ; fi
+
+# if git is not installed, don't try to use it
+if [ ! -x /usr/bin/git ] ; then
+	_clue_feature_git=false
+fi
+
+# show domain part of hostname in different color per environment
+if $_clue_feature_environment_color ; then
+	if test -x /usr/bin/facter ; then
+	    case $( facter environment ) in
+		live)	    _clue_ENVcolor="$_clueCol_ENV_live";;
+		stage)	    _clue_ENVcolor="$_clueCol_ENV_stage";;
+		dev)        _clue_ENVcolor="$_clueCol_ENV_dev";;
+		production) _clue_ENVcolor="$_clueCol_ENV_production";;
+		*)          _clue_ENVcolor="$_clueCol_ENV_default";;
+	    esac
+	elif hostname -f | grep -q "\.int\." ; then
+	    _clue_ENVcolor="$_clueCol_ENV_production"
+	elif hostname -f | grep -q "\.test\." ; then
+            _clue_ENVcolor="$_clueCol_ENV_stage"
+        elif hostname -f | grep -q "\.itest\." ; then
+            _clue_ENVcolor="$_clueCol_ENV_live"
+        elif hostname -f | grep -q "\.dev\." ; then
+            _clue_ENVcolor="$_clueCol_ENV_dev"
+	elif hostname -f | grep -q "\.my-domain.tld" ; then
+	    _clue_ENVcolor="$_clueCol_ENV_default"
+	else
+#	    _clue_ENVcolor="$_clueCol_ENV_default"
+	    _clue_ENVcolor="$_clueCol_ENV_live"
+	fi
+else
+	_clue_ENVcolor="$_clueCol_ENV_default"
+fi
+
+## SElinux stuff
+if $_clue_feature_SElinux ; then
+	if test -x /usr/sbin/getenforce ; then
+		# SELinux
+		_clue_se=true
+	else
+		# no SELinux
+		_clue_se=false
+	fi
+else
+	_clue_se=false
+fi
+
+# show configured username instead of real one to shorten the prompt a bit (but only replace configured, so if the same prompt is used with multiple users eg. root you still the username if you su - $otheruser )
+if $_clue_feature_virtual_username ; then
+    if [ "$USER" = "${_clue_user_name}" ] ; then
+    	_clue_user=${_clueCol_virtual_username}${_clue_virtual_user}
+    elif [ "$USER" = "root" ] ; then
+	_clue_user=${_clueCol_virtual_user_root}\\u
+    else
+	_clue_user=${_clueCol_virtual_user_default}\\u
+    fi
+else
+    _clue_user="${_clueCol_username}\\u"
+fi
+
+# show debian distro in command line
+# TODO make it compatible with more OS/versions and change logic from if/else to something reading a config file and support unlimited different Versions
+if $_clue_feature_debian_distri ; then
+	# workaround for presentation with ubuntu
+	if [ "$(cat /etc/issue 2>/dev/null | grep -i ubuntu)" != "" ] ; then
+	    _clue_ubuntu_distri="$(grep -i ubuntu /etc/issue | awk '{print $2}' | cut -d. -f 1 )"
+	    if [ "$_clue_ubuntu_distri" = "16" ] ; then
+		_clue_distri=""
+	    elif [ "$_clue_ubuntu_distri" = "14" ] ; then
+		_clue_distri="${_clueCol_distri_6}ub$_clue_ubuntu_distri$Color_Off|"
+	    elif [ "$_clue_ubuntu_distri" = "12" ] ; then
+		_clue_distri="${_clueCol_distri_5}ub$_clue_ubuntu_distri$Color_Off|"
+	    else
+		_clue_distri="${_clueCol_distri_default}ub$_clue_ubuntu_distri$Color_Off|"
+	    fi
+	else
+		_clue_debian_distri="$(cat /etc/debian_version | cut -c 1-1 )"
+		if [ "$_clue_debian_distri" = "7" ] ; then
+		    _clue_distri="${_clueCol_distri_7}"
+		elif [ "$_clue_debian_distri" = "6" ] ; then
+		    _clue_distri="${_clueCol_distri_6}$_clue_debian_distri$Color_Off|"
+		elif [ "$_clue_debian_distri" = "5" ] ; then
+		    _clue_distri="${_clueCol_distri_5}$_clue_debian_distri$Color_Off|"
+		elif [ "$_clue_debian_distri" = "4" ] ; then
+		    _clue_distri="${_clueCol_distri_4}$_clue_debian_distri$Color_Off|"
+		else
+		    _clue_distri="${_clueCol_distri_default}$_clue_debian_distri$Color_Off|"
+		fi
+	fi
+else
+	_clue_distri=""
+fi
+
+# hexdays - see the uptime in days as a hexadecimal value just before the colored timestamps :) if you need it
+# this feature needs "bc"
+if $_clue_feature_uptime_hexdays && test -x /usr/bin/bc ; then
+	_clue_hexdays=" ${_clueCol_hexdays}$( (echo obase=16 ; echo "$( cat /proc/uptime | cut -d. -f1 ) / $(( 3600 * 24 )) " ) |bc )"
+fi
+
+# see intuitively if you are on your workstation by giving it a different color
+if $_clue_feature_workstation_color ; then
+	if [ "$(hostname -s)" = "$_clue_workstation_name" ] ; then
+	    _clue_HOSTColor="${_clueCol_workstation}"
+	else
+	    _clue_HOSTColor="${_clueCol_host}"
+	fi
+else
+	_clue_HOSTColor="${_clueCol_host}"
+fi
+
+# short domain
+if $_clue_feature_short_domain ; then
+
+	# use first character of each part of the domain name to shorten it
+#	shorten_domain() { for i in $(echo "$1" | sed 's/\./ /g' ) ; do echo -n "${i:0:1}" ; done ; }
+
+	if test -f ~/.clueprompt.cfg ; then
+		_clue_short_domain="$(echo -n "$(grep "^_clue_shorten_domain=$(hostname -f | cut -d. -f 2-)=" ~/.clueprompt.cfg | cut -d= -f 3 )" )"
+	fi
+	if [ "$_clue_short_domain" = "" ] ; then
+		_clue_short_domain="$(for i in $(echo "$(hostname -f | cut -d. -f 2- )" | sed 's/\./ /g' ) ; do echo -n "${i:0:1}" ; done )"
+	fi
+else
+	_clue_short_domain=""
+fi
+
+# experimental feature
+if $_clue_feature_hostfeatures ; then
+
+	## visualize what this host is about
+
+	# A sterisk
+	# C luster (percona/heartbeat)
+	# M ysql
+	# P ostfix
+	# S quid Proxy
+	# U carp
+	# W ebserver (Apache/lighttpd)
+
+	_clue_host_features=""
+
+	# A sterisk
+	if test -f /etc/asterisk/asterisk.conf ; then
+	    _clue_host_features="${_clue_host_features}A"
+	fi
+
+	# C luster (percona/heartbeat)
+	if test -f /etc/heartbeat/ha.cf ; then
+	    _clue_host_features="${_clue_host_features}C"
+	fi
+
+	# M ysql
+	if test -x /usr/sbin/mysqld ; then
+	    _clue_host_features="${_clue_host_features}M"
+	fi  
+
+	# P ostfix
+	if test -f /etc/postfix/main.cf ; then
+	    _clue_host_features="${_clue_host_features}P"
+	fi  
+
+	# S quid proxy
+	if test -f /etc/squid3/squid.conf ; then
+	    _clue_host_features="${_clue_host_features}H"
+	fi
+
+	# U carp
+	if [ "$(ls /etc/ucarp/*.conf 2>/dev/null)" != "" ] ; then
+	    _clue_host_features="${_clue_host_features}U"
+	fi
+
+	# W ebserver (Apache/lighttpd)
+	if test -f /etc/apache2/apache2.conf || test -f  /etc/lighttpd/lighttpd.conf ; then
+	    _clue_host_features="${_clue_host_features}W"
+	fi
+
+
+	if [ ${#_clue_host_features} -gt 0 ] ; then
+	    _clue_host_features="${_clue_host_features},"
+	fi
+
+else
+	_clue_host_features=""
+fi
+
+## SE Linux stuff
+_clue_func_SElinux_context(){
+echo -n '$(
+       con="$( /usr/bin/id -Z 2>/dev/null | cut -d: -f 2 )" ; \
+       if [ "$con" = "sysadm_r" ] ; then \
+               echo -n "'$_clueCol_SE_sysadm'A.''" ; \
+       elif [ "$con" = "staff_r" ] ; then \
+               echo -n "'$_clueCol_SE_staff'T.''" ; \
+       elif [ "$con" = "user_r" ] ; then \
+               echo -n "'$_clueCol_SE_user'U.''" ; \
+       else \
+               echo -n "'$_clueCol_SE_default'$con.''" ; \
+       fi ; \
+)'
+}
+
+_clue_func_SElinux_getenforce(){
+echo -n '$(
+		_clue_SE_getenforce_out="$( /usr/sbin/getenforce 2>/dev/null)"
+		if echo "$_clue_SE_getenforce_out" | grep -iq "Enforcing" ; then
+			echo -n "'$_clueCol_SE_enforcing'"
+		elif echo "$_clue_SE_getenforce_out" | grep -iq "Permissive" ; then
+			echo -n "'$_clueCol_SE_permissive'"
+		elif echo "$_clue_SE_getenforce_out" | grep -iq "Disabled" ; then
+			echo -n "'$_clueCol_SE_disabled'"
+		else
+			echo -n "'$_clueCol_SE_unknown'"
+		fi
+)'
+}
+
+#### some functionis below simply echoes a string containing code to be inserted into $PS1
+
+_clue_func_jobs(){
+echo -n '$(
+	_clue_jobs_nr=$(jobs | wc -l )
+	if [ $_clue_jobs_nr -gt 0 ] ; then
+		echo -n " '$_clueCol_jobs'[$_clue_jobs_nr]'$Color_Off'"
+	fi
+)' 
+}
+
+_clue_func_colorful_timestamps(){
+echo -n '$(
+	_clue_m=$(( $( date "+%k" ) * 60 + $( date  "+%-M" ) ))
+ 	if [ $_clue_m -lt $_clue_timestamp_1 ] ; then 
+		echo -n "'$_clueCol_timestamp_1'"
+      	elif [ $_clue_m -lt $_clue_timestamp_2 ] ; then
+		echo -n "'$_clueCol_timestamp_2'"
+	elif [ $_clue_m -lt $_clue_timestamp_3 ] ; then
+		echo -n "'$_clueCol_timestamp_3'"
+	elif [ $_clue_m -lt $_clue_timestamp_4 ] ; then
+		echo -n "'$_clueCol_timestamp_4'"
+	elif [ $_clue_m -lt $_clue_timestamp_5 ] ; then
+		echo -n "'$_clueCol_timestamp_5'"
+	elif [ $_clue_m -lt $_clue_timestamp_6 ] ; then
+		echo -n "'$_clueCol_timestamp_6'"
+	else
+		echo -n "'$_clueCol_timestamp_7'"
+	fi 
+	echo -n "'$_clue_timestamp_format${Color_Off}'"
+)'
+}
+
+_clue_func_git_fetchinfo(){
+echo -n '$(
+		_clue_git_fetch_interval=0 
+		_clue_autofetch_in_progress=0
+		if $_clue_feature_git_autofetch_trigger ; then
+			_clue_git_autofetch_try="${_clue_git_autofetch_file}.try"
+			if test -f "${_clue_git_autofetch_try}" ; then 
+				_clue_git_fetch_interval="$(cat "${_clue_git_autofetch_try}" )" 
+                if [ "$( date -r "${_clue_git_autofetch_file}" "+%s" )" -lt "$( date -d "-${_clue_git_fetch_interval}min" "+%s" )" ] ; then
+                    if [ "$(lsof "${_clue_git_autofetch_try}" )" != "" ] ; then 
+                        _clue_autofetch_in_progress=1
+                    elif [ "$( date -r "${_clue_git_autofetch_try}" "+%s" )" -lt "$( date -d "-${_clue_git_fetch_interval}min" "+%s" )" ] ; then 
+                        touch "${_clue_git_autofetch_try}" 
+                        _clue_autofetch_in_progress=1
+                        ssh-add -L 2>/dev/null | grep -q ".ssh/${_clue_git_fetch_key}" && echo "( /usr/bin/git fetch > /dev/null 2>&1 && touch \"${_clue_git_autofetch_file}\" ) | tee -a \"${_clue_git_autofetch_try}\" " | at now >/dev/null 2>&1 
+                    fi 
+                fi
+			fi 
+		fi 
+		if [ "$( find "${_clue_git_autofetch_file}" -mmin -$(( ${_clue_git_fetch_interval} + 1 )) 2>/dev/null )" != "" ] ; then 
+		    echo -n "'${_clueCol_autofetch_ok}${_clue_autofetch_symbol_up2date}'" 
+		elif [ $_clue_autofetch_in_progress -eq 1 ] ; then 
+		    echo -n "'${_clueCol_autofetch_in_progress}${_clue_autofetch_symbol_in_progress}'" 
+		elif test -f "${_clue_git_autofetch_file}" ; then 
+		    echo -n "'${_clueCol_autofetch_fail}${_clue_autofetch_symbol_out_of_date}'" 
+		else 
+		    _clue_git_last_commit_date="$( date -d "$(git log -n 1 | grep ^Date | cut -c 13-32 )" "+%s" )" 
+		    if [ $_clue_git_last_commit_date -lt "$( date -d "-$_clue_autofetch_unconfigured_warn_age" "+%s" )" ] ; then 
+			    echo -n "'${_clueCol_autofetch_disabled_warn}${_clue_autofetch_symbol_unconfigured_and_old}'" 
+		    else 
+			    echo -n "'${_clueCol_autofetch_disabled}${_clue_autofetch_symbol_unconfigured}'" 
+		    fi 
+		fi 
+)'
+}
+
+_clue_func_git_diff() {
+    git diff FETCH_HEAD --name-only | while read file ; do 
+         echo "$_clue_git_status_porcelain" | egrep "^ ?(A|D|M|\?\?) ? $file$"
+        #| egrep "^#\s+modified:\s+$file$"
+    done
+}
+
+# TODO display true fast forward differently to behind
+_clue_func_git_commit_status(){
+echo -n '$(
+        _clue_git_remote="$(git config --get branch.${_clue_git_branch}.remote)"
+        if [ "${_clue_git_remote}" = "" ] ; then
+            echo -n "'${_clueCol_gitcommit_localbranch}'" ; $_clue_git_branches_notify && echo -n "'$Ul'" ; echo -n "'${_clue_git_symbol_localbranch}'"
+        elif echo "$_clue_git_status" | egrep -q "have diverged" ; then 
+            echo -n "'${_clueCol_gitcommit_diverged}'" ; $_clue_git_branches_notify && echo -n "'$Ul'" ; echo -n "'${_clue_git_symbol_diverged}'" 
+        elif echo "$_clue_git_status" | grep "Your branch is behind" | grep -q "and can be fast-forwarded" && [ "$_clue_feature_git_show_merge_files" = "false" -o "$(_clue_func_git_diff )" = "" ] ; then 
+            # working tree is behind and fast forward is possible - git pull would just update
+            echo -n "'${_clueCol_gitcommit_fastforward}'" ; $_clue_git_branches_notify && echo -n "'$Ul'" ; echo -n "'${_clue_git_symbol_fastforward}'" 
+        elif echo "$_clue_git_status" | grep -q "Your branch is behind" ; then 
+            # working tree is behind but manually merge is necessary 
+            echo -n "'${_clueCol_gitcommit_behind}'" ; $_clue_git_branches_notify && echo -n "'$Ul'" ; echo -n "'${_clue_git_symbol_merge}'" 
+        elif echo "$_clue_git_status" | grep -q "Your branch is ahead" ; then 
+            # ahead - you need to push 
+            echo -n "'${_clueCol_gitcommit_ahead}'" ; $_clue_git_branches_notify && echo -n "'$Ul'" ; echo -n "'${_clue_git_symbol_ahead}'" 
+        elif [ ! -f "$_clue_git_autofetch_file" ] ; then
+                echo -n "'${_clueCol_gitcommit_unknown_autofetch_disabled}'" ; $_clue_git_branches_notify && echo -n "'$Ul'" ; echo -n "'${_clue_git_symbol_unconfigured_same}'"
+        else 
+            echo -n "'${_clueCol_gitcommit_same}'" ; $_clue_git_branches_notify && echo -n "'$Ul'" ; echo -n "'${_clue_git_symbol_same}'" 
+        fi 
+	echo -n "'${Color_Off}'"
+)'
+}
+
+# TODO display number of untracked, modified and staged files (one digit) to display all three infos at once so a staged file would not hide presence of untracked
+_clue_func_git_working_tree_info(){
+echo -n '$(
+      if echo "$_clue_git_status" | grep -q "nothing to commit" > /dev/null 2>&1 ; then 
+        # clean repo - nothing to commit
+        echo -n "${_clue_git_ab}'${_clueCol_git_clean}'$(__git_ps1 "${_clue_git_symbol_worktree_clean_open}%s${_clue_git_symbol_worktree_clean_close}")"
+      elif echo "$_clue_git_status" | grep -q "no changes added to commit" > /dev/null 2>&1 ; then 
+    	# unstaged changes present
+        echo -n "${_clue_git_ab}'${_clueCol_git_changed}'$(__git_ps1 "${_clue_git_symbol_worktree_changed_open}%s${_clue_git_symbol_worktree_changed_close}")"
+      elif echo "$_clue_git_status" | grep -q "nothing added to commit but untracked files present" > /dev/null 2>&1 ; then 
+    	# untracked files present
+    	echo -n "${_clue_git_ab}'${_clueCol_git_untracked}'$(__git_ps1 "${_clue_git_symbol_worktree_untracked_open}%s${_clue_git_symbol_worktree_untracked_close}")"
+      else 
+        # changes to working tree
+        echo -n "${_clue_git_ab}'${_clueCol_git_staged}'$(__git_ps1 "${_clue_git_symbol_worktree_staged_open}%s${_clue_git_symbol_worktree_staged_close}")"
+      fi 
+)'
+}
+
+_clue_func_git_autocommit_do(){
+    git add ${_clue_git_toplevel}
+    git commit -m "${_clue_git_autocommit_message}" > /dev/null 2>&1
+}
+
+
+_clue_func_git_autocommit_check(){
+echo -n '$( 
+     if [ "$( date -r "${_clue_git_autocommit_file}" "+%s" )" -lt "$( date -d "-$_clue_git_autocommit_min_age" "+%s" )" -a "$( date -r "${_clue_git_autocommit_file}" "+%s" )" -lt "$( date -d "0:00" "+%s" )" ] ; then 
+            echo -n  "'${_clueCol_autocommit_in_progress}'"
+            echo -en "${_clue_autocommit_symbol}"
+            echo -n  "'${Color_Off}'" 
+            _clue_func_git_autocommit_do 
+       else 
+            echo -n "'${_clueCol_autocommit_waiting}'"
+            echo -en "${_clue_autocommit_symbol}"
+            echo -n "'${Color_Off}'"
+    fi 
+    touch "${_clue_git_autocommit_file}"
+)'
+}
+
+if [ -z "$_clue_prompt_flavour" -o "$_clue_prompt_flavour" = "default" ] ; then
+    	if [ -x /usr/bin/git -a -f ~/.gitconfig ] ; then
+    	    _clue_git_local_user="$(git config user.email)"
+    	fi
+    	PS1='$( _clue_last_cmd_exit=$? ;\
+	$_clue_se && $_clue_feature_SElinux_context && echo -n "'$(_clue_func_SElinux_context )'" ;\
+	echo -n "'${_clue_host_features}$Color_Off'" ;\
+	echo -n "'${_clue_user}$Color_Off'" ;\
+	if $_clue_se && $_clue_feature_SElinux_getenforce ; then \
+		echo -n "'$(_clue_func_SElinux_getenforce )'" ;\
+	else \
+		echo -n "'${_clueCol_at_default}@$Color_Off'" ;\
+	fi ;\
+	echo -n "'${_clue_distri}$Color_Off'" ;\
+	echo -n "'${_clue_HOSTColor}\\h$Color_Off'." ;\
+	echo -n "'${_clue_ENVcolor}${_clue_short_domain}$Color_Off'"  ;\
+        if $_clue_feature_show_jobs 		; then 	echo -n "'$(_clue_func_jobs )'" 			; fi ;\
+        if $_clue_feature_uptime_hexdays ; then \
+		echo -n "'$_clue_hexdays'" ;\
+        	$_clue_feature_colorful_timestamps && 	echo -n "/" ;\
+		echo -n "'${Color_Off}'" ;\
+	fi ;\
+        if $_clue_feature_colorful_timestamps 	; then 	\
+		$_clue_feature_uptime_hexdays || echo -n " " ;\
+		echo -n "'$(_clue_func_colorful_timestamps )'"	;\
+	fi ;\
+        if $_clue_feature_git ; then \
+            _clue_git_branch="$( git branch 2>/dev/null | grep "^*" | cut -c 3-)" ;\
+            if [ ! -z "${_clue_git_branch}" ] ; then \
+                echo -n " " ;\
+                if [ "$(__git_ps1 "%s" )" = "GIT_DIR!" ] ; then \
+                    _clue_git_status="GIT_DIR" ;\
+                    _clue_git_toplevel="" ;\
+                else \
+                    _clue_git_status="$(git status)" ;\
+                    _clue_git_status_porcelain="$(git status -u --porcelain )" ;\
+                    _clue_git_toplevel="$(git rev-parse --show-toplevel 2>/dev/null )"  ;\
+                fi ;\
+                if [ "$_clue_git_toplevel" != "" ] ; then \
+                    if $_clue_feature_git_autocommit ; then \
+                        _clue_git_autocommit_file="$(dirname ${_clue_git_toplevel})/.$(basename ${_clue_git_toplevel}).autocommit" ;\
+                        if [ -f "$_clue_git_autocommit_file" ] ; then \
+                            echo -n "'$( _clue_func_git_autocommit_check )'" ;\
+                        fi ; \
+                    fi ; \
+                    _clue_git_autofetch_file="$(dirname ${_clue_git_toplevel})/.$(basename ${_clue_git_toplevel}).autofetch" ;\
+                    if $_clue_feature_git_autofetch ; then \
+                        echo -n "'$(_clue_func_git_fetchinfo )'" ;\
+                    fi ;\
+                    if $_clue_feature_git_commit_status ; then \
+                        if $_clue_feature_git_branches_commit_status && git branch -v | grep -v "^*" | egrep -q "behind|ahead" ; then \
+                            _clue_git_branches_notify=true ;\
+                        else \
+                            _clue_git_branches_notify=false ;\
+                        fi ; \
+                        echo -n "'$(_clue_func_git_commit_status )'" ;\
+                    fi ;\
+                    if $_clue_feature_git_working_tree_info ; then \
+                            echo -n "'$(_clue_func_git_working_tree_info )'" ;\
+                    fi ;\
+                    _clue_git_repo="$(basename ${_clue_git_toplevel} )" ;\
+                    _clue_git_path="$(pwd | cut -c $(( ${#_clue_git_toplevel} + 1 ))- )" ;\
+                    echo -n "'${_clueCol_git_symbol_repo}'${_clue_git_symbol_repo}'${_clueCol_git_repo}'${_clue_git_repo}'${_clueCol_git_path}'${_clue_git_symbol_path}${_clue_git_path}'$Color_Off'" ;\
+                elif [ "$_clue_git_status" = "GIT_DIR" ] ; then \
+                    echo -n "'${_clueCol_git_staged}'{GIT_DIR}'${_clueCol_path}$PathShort$Color_Off'" ;\
+                else \
+                    echo -n "'${_clueCol_git_staged}'{CLUE_BUG?}'${_clueCol_path}$PathShort$Color_Off'" ;\
+                fi ;\
+            else \
+                echo -n " '${_clueCol_path}$PathShort$Color_Off'" ;\
+            fi ;\
+        else \
+            echo -n " '${_clueCol_path}$PathShort$Color_Off'" ;\
+        fi ;\
+	if [ "$_clue_feature_last_cmd_exit_status" = "true" -a $_clue_last_cmd_exit -ne 0 ] ; then echo -n " '${_clueCol_last_cmd_brace}'${_clue_last_cmd_symbol_open}'${_clueCol_last_cmd_exit}'$_clue_last_cmd_exit'${_clueCol_last_cmd_brace}'${_clue_last_cmd_symbol_close}'${Color_Off}'" ; fi ;\
+    ) \\$ '
+
+elif [ -f "$HOME/.clueprompt.flavour.$_clue_prompt_flavour" ] ; then
+	# if you have provided your own, source it
+	. "$HOME/.clueprompt.flavour.$_clue_prompt_flavour"
+
+else
+	## fallback to something very simple and compatible
+	PS1='\u@\h:\w\$ '
+fi
+
