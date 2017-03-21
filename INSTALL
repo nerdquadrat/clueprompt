@@ -1,6 +1,6 @@
 #!/bin/bash
 
-git_dir="$(dirname "$0")"
+git_dir="$PWD/$(dirname "$0")"
 
 # install symlinks to git repo files in $HOME and copy config
 
@@ -31,6 +31,5 @@ fi
 
 
 don't forget to edit your config ~/.clueprompt.cfg
-
+EOF
 fi
-
