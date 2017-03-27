@@ -46,6 +46,17 @@ git (autocommit)
 git branch info's
  display what action is necessary on other branches: bi
 
+git summarize
+ display pending actions for all branches in configured git folders: gs
+ don't hide CLEAN branches: gsa
+ each folder needs to be configured in .clueprompt.cfg, wildcards and ~ are allowed, names can be the same:
+  _clue_git_summary=GitName=~/git/*
+  _clue_git_summary=PROJX=~/projx/bar
+  _clue_git_summary=PROJX=~/projx/foo
+
+git fetch all
+ do a "git fetch --all" in all folders specified for "gs" and "gsa": gfa 
+
 show this help screen: -h
 
 btw most settings via cluectl are stored in your terminal session
@@ -203,6 +214,39 @@ case $1 in
                 rm "$_clue_git_autocommit_file"
             fi   
             ;; 
+    gs)		for _clue_git_summary_tmp in $( grep ^_clue_git_summary= ~/.clueprompt.cfg | cut -d= -f 2- ) ; do 
+			dirs="$( echo "${_clue_git_summary_tmp#*=}" | sed "s@~@$HOME@" )"
+			name=${_clue_git_summary_tmp%=*} ; echo "### $name ###"
+			ls -d1 $dirs | while read dir; do 
+				[ -d "$dir" ] && cd $dir && cluectl bi 2>&1 | egrep -v "CLEAN: |fatal: Not a git repository|Stopping at filesystem boundary" | while read line; do 
+					echo $dir $line
+				done
+			done
+			echo
+		done
+		;;
+
+    gsa)	for _clue_git_summary_tmp in $( grep ^_clue_git_summary= ~/.clueprompt.cfg | cut -d= -f 2- ) ; do 
+			dirs="$( echo "${_clue_git_summary_tmp#*=}" | sed "s@~@$HOME@" )"
+			name=${_clue_git_summary_tmp%=*} ; echo "### $name ###"
+			ls -d1 $dirs | while read dir; do 
+				[ -d "$dir" ] && cd $dir && cluectl bi 2>&1 | egrep -v "fatal: Not a git repository|Stopping at filesystem boundary" | while read line; do 
+					echo $dir $line
+				done
+			done
+			echo
+		done
+		;;
+    gfa)	for _clue_git_summary_tmp in $( grep ^_clue_git_summary= ~/.clueprompt.cfg | cut -d= -f 2- ) ; do 
+			dirs="$( echo "${_clue_git_summary_tmp#*=}" | sed "s@~@$HOME@" )"
+			name=${_clue_git_summary_tmp%=*} ; echo "### $name ###"
+			ls -d1 $dirs | while read dir; do 
+				[ -d "$dir" ] && cd $dir ; echo $PWD git fetch --all
+			done
+			echo
+		done
+		;;
+
     --help)     cluectl_help   ;;
     *)      cluectl_help    ;;
 esac
