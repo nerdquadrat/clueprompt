@@ -112,8 +112,8 @@ if $_clue_feature_debian_distri ; then
 	    else
 		_clue_distri="${_clueCol_distri_default}ub$_clue_ubuntu_distri$Color_Off|"
 	    fi
-	else
-		_clue_debian_distri="$(cat /etc/debian_version | cut -c 1-1 )"
+	elif [ -f /etc/debian_version ] ; then
+		_clue_debian_distri="$(cat /etc/debian_version 2>/dev/null | cut -c 1-1 )"
 		if [ "$_clue_debian_distri" = "7" ] ; then
 		    _clue_distri="${_clueCol_distri_7}"
 		elif [ "$_clue_debian_distri" = "6" ] ; then
@@ -125,6 +125,8 @@ if $_clue_feature_debian_distri ; then
 		else
 		    _clue_distri="${_clueCol_distri_default}$_clue_debian_distri$Color_Off|"
 		fi
+	else
+		    _clue_distri=""
 	fi
 else
 	_clue_distri=""
